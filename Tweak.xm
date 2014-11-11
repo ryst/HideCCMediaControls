@@ -11,7 +11,23 @@
 #define kCFCoreFoundationVersionNumber_iOS_7_0 847.20
 #endif
 
-#import <SpringBoard/SpringBoard.h>
+#ifndef kCFCoreFoundationVersionNumber_iOS_8_0
+#define kCFCoreFoundationVersionNumber_iOS_8_0 1140.10
+#endif
+
+#ifndef kCFCoreFoundationVersionNumber_iOS_8_1
+#define kCFCoreFoundationVersionNumber_iOS_8_1 1141.14
+#endif
+
+#define isiOS7 (kCFCoreFoundationVersionNumber >= 847.20)
+#define isiOS8 (kCFCoreFoundationVersionNumber >= 1140.10)
+
+@class SBApplication;
+
+@interface SpringBoard
+-(id)nowPlayingApp; // iOS7
+-(int)nowPlayingProcessPID; // iOS8
+@end
 
 static UIInterfaceOrientation currentOrientation = UIInterfaceOrientationPortrait;
 static bool hideMediaControlsLast = NO;
@@ -37,23 +53,15 @@ static bool hideMediaControls = NO;
 }
 
 -(void)controlCenterWillPresent {
-	SBApplication* nowPlayingApp = [(SpringBoard*)[UIApplication sharedApplication] nowPlayingApp];
-	if (nowPlayingApp)
-		hideMediaControls = NO;
-	else
-		hideMediaControls = YES;
+	if (isiOS8) {
+		int nowPlayingProcessPID = [(SpringBoard*)[UIApplication sharedApplication] nowPlayingProcessPID];
+		hideMediaControls = (nowPlayingProcessPID <= 0);
+	} else {
+		SBApplication* nowPlayingApp = [(SpringBoard*)[UIApplication sharedApplication] nowPlayingApp];
+		hideMediaControls = (nowPlayingApp == nil);
+	}
 
 	%orig;
-}
-%end
-
-%hook SBControlCenterContentView
--(id) _separatorAtIndex:(unsigned)index {
-	if (index == 1 && hideMediaControls) { // separator between brightness and media controls
-		return nil;
-	} else {
-		return %orig;
-	}
 }
 %end
 
@@ -68,10 +76,25 @@ static bool hideMediaControls = NO;
 %end
 %end
 
+%group HideCCMediaControls7
+%hook SBControlCenterContentView
+-(id) _separatorAtIndex:(unsigned)index {
+	if (index == 1 && hideMediaControls) { // separator between brightness and media controls
+		return nil;
+	} else {
+		return %orig;
+	}
+}
+%end
+%end
+
 %ctor {
-	if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_7_0) {
-		if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+	if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+		if (isiOS7) {
 			%init(HideCCMediaControls);
+			if (!isiOS8) {
+				%init(HideCCMediaControls7);
+			}
 		}
 	}
 }
