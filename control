@@ -1,0 +1,9 @@
+Package: com.ryst.hideccmediacontrols
+Name: Hide CC Media Controls
+Depends: mobilesubstrate
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Hide the media controls in CC when there is nothing playing.
+Maintainer: ryst
+Author: ryst
+Section: Tweaks
